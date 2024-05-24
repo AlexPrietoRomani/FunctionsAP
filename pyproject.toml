@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "FunctionsAP"
+version = "0.1.0"
+description = "Paquete para capturar datos y modificaciones de columnas de dataframes"
+authors = ["Alex Anthony Prieto Romani <alexprieto1997@gmail.com>"]
+license = "MIT"  
+
+[tool.build-scripts]
+name = "FunctionsAP" 
+entrypoint = "FunctionsAP.main:main" 
+
+[dependencies]
+pandas = "^2.2.0"
+numpy = "^1.25.2"
+openpyxl = "^3.1.2" 
+chardet = "^5.2.0"
+
+[dev-dependencies]
+pytest = "^7.1.0"
+flake8 = "^4.0.1"

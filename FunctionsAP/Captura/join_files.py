@@ -4,7 +4,7 @@ import os
 import openpyxl
 import chardet
 import re
-import datetime
+from datetime import datetime
 
 #Creando función para leer archivos csv de una carpeta. (Para dos espacios de fecha inicial)
 def join_files(carpeta, column_types = None, time = False, type = [".csv", "xlsx"]):
