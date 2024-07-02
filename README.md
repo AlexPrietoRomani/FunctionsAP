@@ -11,3 +11,7 @@ pip install git+https://github.com/AlexPrietoRomani/FunctionsAP.git#egg=Function
 ````
 pip install --upgrade git+https://github.com/AlexPrietoRomani/FunctionsAP.git#egg=FunctionsAP
 ````
+### Eliminar libreria
+````
+pip uninstall FunctionsAP
+````
