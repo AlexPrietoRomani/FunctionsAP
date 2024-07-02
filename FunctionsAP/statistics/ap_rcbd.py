@@ -1,6 +1,10 @@
 import numpy as np
 import pandas as pd
 
+class FieldLayout:
+    def __init__(self, book):
+        self.book = book
+
 def ap_rcbd(geno, nb, nc, variable_capacity=False, col_capacities=None,serpentine=True, alongside=['no', 'rows', 'columns']):
     """
     Crea un diseño de bloques completos al azar aumentado (Augmented RCBD).
