@@ -7,7 +7,6 @@ import re
 from datetime import datetime
 
 #Creando función para leer archivos csv de una carpeta. (Para dos espacios de fecha inicial)
-#Creando función para leer archivos csv de una carpeta. (Para dos espacios de fecha inicial)
 def join_files(carpeta, column_types = None, time = False, type = [".csv", "xlsx"]):
   """
   Crea un DataFrame a partir de archivos CSV en una carpeta.
