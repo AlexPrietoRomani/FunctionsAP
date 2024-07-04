@@ -24,8 +24,8 @@ def columns_add(dataframe, columns, name_column_new, type = ["Number", "Text"], 
     #Creando condicional para el argumento "type"
     if type == "Number":
         "" 
-        #Devolviendo columna nueva con el nombre elegido por el usuario.
-        df[name_column_new] = df[columns].sum(axis = 1)
+        #Devolviendo columna nueva.
+        df["CoL$&$umNa_칩CreADA"] = df[columns].sum(axis = 1)
          
     if type == "Text":
         
@@ -36,18 +36,19 @@ def columns_add(dataframe, columns, name_column_new, type = ["Number", "Text"], 
         #Creando formula para poder sumar columnas indiferente cuantas columnas existan
         formula = "+".join(["df['" + column + "']" for column in columns])
         
-        #Devolviendo columna nueva con el nombre elegido por el usuario.
-        df[name_column_new] = eval(formula)
-
-    else:
-        print("Error in argument: type; the possible arguments are Number or text")
+        #Devolviendo columna nueva.
+        df["CoL$&$umNa_칩CreADA"] = eval(formula)
         
     #Creando condicional para el argumento "drop"
     if drop == True:
       
       #Eliminando columnas utilizadas
       df.drop(columns = columns, inplace=True)
-      
+    
+    #Cambiando nombre de la columna a la especificada según el argumento "name_column_new"
+    df.rename(columns = {"CoL$&$umNa_칩CreADA":name_column_new}, inplace = True)
+    
     # Retornando el dataframe  
     return df
+
   
