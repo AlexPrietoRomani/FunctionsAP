@@ -2,7 +2,51 @@ import numpy as np
 import pandas as pd
 
 def data_base_genetic(df, cycle = ["CI","CII", "CIII", "CIV"], index_column = [], column_calid = [], list_dic = {} ):
+    """
+    Procesa un DataFrame para generar un análisis genético de datos basado en evaluaciones y columnas de calidad.
     
+    Args:
+        df (pd.DataFrame): DataFrame con los datos a procesar.
+        cycle (str, optional): Ciclo de evaluación. El valor por defecto es "CI".
+        index_column (list): Lista de columnas que se usarán como índice.
+        column_calid (list): Lista de columnas de calidad a procesar.
+        list_dic (dict): Diccionario de mapeo para las columnas de calidad, se encuentran los nombres de las columnas junto con sus diccionarios de equivalencia:
+
+    Returns:
+        tuple: Tupla con tres elementos:
+            - dataframe (pd.DataFrame): DataFrame original con columnas reordenadas y nuevas columnas calculadas, solo es la concatenación con calculos
+            - pivot_df (pd.DataFrame): DataFrame pivotado con columnas evaluadas.
+            - resumen (pd.DataFrame): DataFrame con el resumen de los cálculos y análisis.
+    Raises:
+        TypeError: Si `index_column` no es una lista, `column_calid` no es una lista, o `list_dic` no es un diccionario.
+
+    Example:
+        >>> df = pd.DataFrame({
+        ...     'Columna1': [1, 2, 3],
+        ...     'Columna2': ["alto", "bajo", "bajo"],
+        ...     'Columna3': ["grande", "chico", "grande"],
+        ...     'Evaluación': [1, 2, 3]
+        ... })
+        >>> index_column = ['Columna1']
+        >>> column_calid = ['Columna2', 'Columna3']
+        >>> mapeo_Columna2 = {"alto":1,"bajo":0}
+        >>> mapeo_Columna3 = {"grande":1,"chico":0}
+        >>> list_dic = lista_diccionarios = {
+            'Columna2': mapeo_Columna2,
+            'Columna3': mapeo_Columna3}    
+        >>> data_base_genetic(df, index_column=index_column, column_calid=column_calid, list_dic=list_dic)
+    """
+    # Manejo de errores para los tipos de argumentos
+    if not isinstance(index_column, list):
+        raise TypeError("index_column debe ser una lista.")
+    if not isinstance(column_calid, list):
+        raise TypeError("column_calid debe ser una lista.")
+    if not isinstance(list_dic, dict):
+        raise TypeError("list_dic debe ser un diccionario.")
+    for key, value in list_dic.items():
+        if not isinstance(value, dict):
+            raise TypeError(f"El valor asociado a la clave '{key}' en list_dic debe ser un diccionario.")
+
     # Obteniendo nombres de las columnas del dataframe
     list_columns = list(df.columns)
     
@@ -98,10 +142,13 @@ def data_base_genetic(df, cycle = ["CI","CII", "CIII", "CIV"], index_column = []
         #Definiendo columnas para repartir los pivot
         columnas_a_pivotear_1 = lista_inted + lista_intercalada_calidad[len(lista_intercalada_calidad)//2:]
         columnas_a_pivotear_2 = lista_intercalada_calidad[:len(lista_intercalada_calidad)//2] + lista_final
+        #Capturando columnas pivotadas
         columnas_a_pivotear = columnas_a_pivotear_1 + columnas_a_pivotear_2
         
-        columnas_index = index_column.copy()
-
+        #Copiando index inicial
+        index_column_copy = index_column.copy()
+        
+        #Copiando dataframe para realizar el pivoteo
         data = df.copy()
 
         pivot_df_1 = pd.pivot_table(data= data,index=index_column, columns="Evaluación", values=columnas_a_pivotear_1, aggfunc="first")
@@ -117,5 +164,68 @@ def data_base_genetic(df, cycle = ["CI","CII", "CIII", "CIV"], index_column = []
 
         #Uniendo dataframes
         pivot_df = pd.merge(pivot_df_1, pivot_df_2, on=index_column, how="outer")
-    
-    return dataframe, pivot_df
+        
+        #Creando lista con los valores únicos de la columnas "Evaluación"
+        evaluaciones = list(df["Evaluación"].unique())
+        
+        #Creando lista del orden de las columnas
+        columnas_sin_index = [f"{columna}_CI-{eval}" for eval in evaluaciones for columna in columnas_a_pivotear]
+        
+        #Agregando index al orden de las columnas
+        index_column_copy.extend(columnas_sin_index)
+        
+        #Reordenando columnas
+        pivot_df = pivot_df.reindex(columns = index_column_copy)
+        
+        ######  Parte 3: Resumen  ###############################################################
+        #Aumentando lista del index 
+        new_order = index_column.copy()
+
+        #Iterando las columnas necesarias de el dataframe pivot_df
+        for evaluación in evaluaciones:
+            columnas = [f'Suma de puntaje_CI-{evaluación}', f'Traits evaluados_CI-{evaluación}', f'Puntos_CI-{evaluación}',f'Evaluados_CI-{evaluación}']
+            new_order.extend(columnas)
+            
+        #Creando dataframe de la selección de columnas
+        resumen = pivot_df[new_order]
+
+        #Iterando columnas donde se reemplazaran valores
+        for evaluación in evaluaciones:
+            resumen[f'Suma de puntaje_CI-{evaluación}'].replace("",0, inplace=True)
+            resumen[f'Traits evaluados_CI-{evaluación}'].replace("",np.nan, inplace=True)
+        
+        #Calculando el promedio ponderado:
+        ## Creando columnas para el paso 1
+        for evaluación in evaluaciones:
+            resumen[f"Paso1_{evaluación}"] = resumen[f'Suma de puntaje_CI-{evaluación}']*resumen[f'Evaluados_CI-{evaluación}']
+
+        ## Creando columnas para el paso 2 y 3
+        resumen["Paso2"] = resumen[[f"Paso1_{evaluacion}" for evaluacion in evaluaciones]].sum(axis=1,skipna=True)
+        resumen["Paso3"] = resumen[[f'Evaluados_CI-{evaluacion}' for evaluacion in evaluaciones]].sum(axis=1,skipna=True)
+
+        # Creando columna del promedio ponderado
+        resumen["Promedio total ponderado CI"] = resumen["Paso2"]/resumen["Paso3"]
+        
+        ## Eliminando columnas usadas para el proceso de promedio ponderado
+        columnas_temporales = [f"Paso1_{evaluacion}" for evaluacion in evaluaciones] + ["Paso2", "Paso3"]
+        resumen.drop(columns=columnas_temporales, inplace=True)
+
+        #Calculando los puntos
+        resumen["Ptos CI"] = resumen[[f"Puntos_CI-{evaluacion}" for evaluacion in evaluaciones]].mean(axis=1,skipna=True)
+
+        #Creando columnas de Evaluados de la campaña
+        resumen = columna_presente(resumen, "Promedio total ponderado CI",'Evaluados')
+
+        #Creando columna de numero de evaluaciones de la campaña
+        resumen["Numero de evaluaciones CI"] = resumen[[f"Traits evaluados_CI-{evaluacion}" for evaluacion in evaluaciones]].count(axis=1)
+        
+        #Iterando columnas donde se reemplazaran valores
+        for evaluación in evaluaciones:
+            resumen[f'Suma de puntaje_CI-{evaluación}'].replace(0,"se", inplace=True)
+            resumen[f'Traits evaluados_CI-{evaluación}'].replace(np.nan,"se", inplace=True)
+
+        # Realizando cambios en la columna de "Promedio total ponderado CI"
+        resumen["Promedio total ponderado CI"].replace(0,"se", inplace=True)
+        resumen["Promedio total ponderado CI"].replace(np.nan,"se", inplace=True)
+        
+    return dataframe, pivot_df, resumen
