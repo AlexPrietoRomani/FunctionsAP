@@ -172,10 +172,10 @@ def data_base_genetic(df, cycle = ["CI","CII", "CIII", "CIV"], index_column = []
         columnas_sin_index = [f"{columna}_CI-{eval}" for eval in evaluaciones for columna in columnas_a_pivotear]
         
         #Agregando index al orden de las columnas
-        index_column_copy.extend(columnas_sin_index)
+        new_order = index_column_copy + columnas_sin_index
         
         #Reordenando columnas
-        pivot_df = pivot_df.reindex(columns = index_column_copy)
+        pivot_df = pivot_df.reindex(columns = new_order)
         
         ######  Parte 3: Resumen  ###############################################################
         #Aumentando lista del index 
