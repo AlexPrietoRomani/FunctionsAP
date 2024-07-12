@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "FunctionsAP"
-version = "0.1.0"
+version = "1.0.0"
 description = "Paquete para capturar datos y modificaciones de columnas de dataframes"
 authors = ["Alex Anthony Prieto Romani <alexprieto1997@gmail.com>"]
 license = "MIT"  
