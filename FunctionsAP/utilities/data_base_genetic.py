@@ -37,12 +37,25 @@ def data_base_genetic(df, cycle = ["CI","CII", "CIII", "CIV"], index_column = []
         >>> data_base_genetic(df, index_column=index_column, column_calid=column_calid, list_dic=list_dic)
     """
     # Manejo de errores para los tipos de argumentos
+    # Verificación de que index_column sea una lista
     if not isinstance(index_column, list):
         raise TypeError("index_column debe ser una lista.")
+    # Verificación de que las columnas en index_column existen en el DataFrame
+    for col in index_column:
+        if col not in df.columns:
+            raise ValueError(f"La columna '{col}' de index_column no existe en el DataFrame.")
+    
+    # Verificación de que column_calid sea una lista
     if not isinstance(column_calid, list):
         raise TypeError("column_calid debe ser una lista.")
+    # Verificación de que las columnas en column_calid existen en el DataFrame
+    for col in column_calid:
+        if col not in df.columns:
+            raise ValueError(f"La columna '{col}' de column_calid no existe en el DataFrame.")
+    # Verificación de que list_dic sea un diccionario
     if not isinstance(list_dic, dict):
         raise TypeError("list_dic debe ser un diccionario.")
+    # Verificación de que el valor asociado a la columna del diccionario sea un diccionario.
     for key, value in list_dic.items():
         if not isinstance(value, dict):
             raise TypeError(f"El valor asociado a la clave '{key}' en list_dic debe ser un diccionario.")
