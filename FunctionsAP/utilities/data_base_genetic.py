@@ -50,11 +50,27 @@ def data_base_genetic(df, cycle = ["CI","CII", "CIII", "CIV"], index_column = []
     # Obteniendo nombres de las columnas del dataframe
     list_columns = list(df.columns)
     
-    #Creando lista de columnas que estan entre index y columnas calidad
-    #Capturando posiciones en la lista de columnas
-    posicion_inicial_calid = list_columns.index(column_calid[0])
-    posición_final_calid = list_columns.index(column_calid[-1])
-    posición_final_index = list_columns.index(index_column[-1])
+    #En caso no esté ordenada las listas que se dieron en los argumentos reordenar estas listas al orden del dataframe proporcionado
+    #Creamos un diccionario de posiciones del dataframe brindado
+    diccionario_posiciones = {}
+    for i, elemento in enumerate(list_columns):
+        diccionario_posiciones[elemento] = i
+    
+    #Capturamos las posiciones iniciales y finales para la lista del indice, indiferente si está está desordenada
+    posición_inicial_index = len(list_columns) + 1
+    posición_final_index = -1
+    for elemento in index_column:
+        posicion_elemento = diccionario_posiciones[elemento]
+        posición_inicial_index = min(posición_inicial_index, posicion_elemento)
+        posición_final_index = max(posición_final_index, posicion_elemento)
+    
+    #Capturamos las posiciones iniciales y finales para la lista del indice, indiferente si está está desordenada
+    posicion_inicial_calid = len(list_columns) + 1
+    posición_final_calid = -1
+    for elemento in column_calid:
+        posicion_elemento = diccionario_posiciones[elemento]
+        posicion_inicial_calid = min(posicion_inicial_calid, posicion_elemento)
+        posición_final_calid = max(posición_final_calid, posicion_elemento)
     
     #Listas de columnas intermedias
     lista_inted = list_columns[int(posición_final_index+1):int(posicion_inicial_calid)]
@@ -78,9 +94,6 @@ def data_base_genetic(df, cycle = ["CI","CII", "CIII", "CIV"], index_column = []
         
         #Creando lista reordenada de las columnas
         orden_columnas = index_column + lista_inted + lista_intercalada_calidad + lista_final
-        
-        #Reordenando columnas
-        df = df.reindex(columns = orden_columnas)
         
         #Función para sumar columnas de la variable
         df["Suma de puntaje"] = df[columnas_a_sumar].sum(axis=1,skipna=True)
@@ -119,6 +132,12 @@ def data_base_genetic(df, cycle = ["CI","CII", "CIII", "CIV"], index_column = []
         #Creando la columna en base a la función creada
         df = columna_presente(df, 'Suma de puntaje','Evaluados')
         
+        #Añadiendo columnas que se agregaron como calculadas
+        orden_columnas= orden_columnas + ["Suma de puntaje","Traits evaluados","Puntos",'Evaluados']
+        
+        #Reordenando columnas
+        df = df.reindex(columns = orden_columnas)
+        
         #Copiando df a un nuevo dataframe
         dataframe = df.copy()
         
@@ -137,13 +156,12 @@ def data_base_genetic(df, cycle = ["CI","CII", "CIII", "CIV"], index_column = []
         lista_inted.remove("Evaluación")
         lista_inted.remove("Semana")
         #Lista del final
-        lista_final = list_columns[int(posición_final_calid+1):]
+        lista_final = list_columns[-4:]
         
         #Definiendo columnas para repartir los pivot
-        columnas_a_pivotear_1 = lista_inted + lista_intercalada_calidad[len(lista_intercalada_calidad)//2:]
-        columnas_a_pivotear_2 = lista_intercalada_calidad[:len(lista_intercalada_calidad)//2] + lista_final
-        #Capturando columnas pivotadas
-        columnas_a_pivotear = columnas_a_pivotear_1 + columnas_a_pivotear_2
+        columnas_a_pivotear = lista_inted + lista_intercalada_calidad + lista_final
+
+        print(f"Numero de columnas de el columnas a pivotear: {len(columnas_a_pivotear)}")
         
         #Copiando index inicial
         index_column_copy = index_column.copy()
@@ -151,19 +169,15 @@ def data_base_genetic(df, cycle = ["CI","CII", "CIII", "CIV"], index_column = []
         #Copiando dataframe para realizar el pivoteo
         data = df.copy()
 
-        pivot_df_1 = pd.pivot_table(data= data,index=index_column, columns="Evaluación", values=columnas_a_pivotear_1, aggfunc="first")
-        pivot_df_2 = pd.pivot_table(data= data,index=index_column, columns="Evaluación", values=columnas_a_pivotear_2, aggfunc="first")
+        pivot_df = pd.pivot_table(data= data,index=index_column, columns="Evaluación", values=columnas_a_pivotear, aggfunc="first")
 
         # Redefinir las columnas
-        pivot_df_1.columns = [f"{col[0]}_CI-{col[1]}" for col in pivot_df_1.columns]
-        pivot_df_2.columns = [f"{col[0]}_CI-{col[1]}" for col in pivot_df_2.columns]
+        pivot_df.columns = [f"{col[0]}_CI-{col[1]}" for col in pivot_df.columns]
 
         # Reiniciar el índice si deseas que "EVALUAR" sea una columna
-        pivot_df_1 = pivot_df_1.reset_index()
-        pivot_df_2 = pivot_df_2.reset_index()
+        pivot_df = pivot_df.reset_index()
 
-        #Uniendo dataframes
-        pivot_df = pd.merge(pivot_df_1, pivot_df_2, on=index_column, how="outer")
+        print(pivot_df.columns)
         
         #Creando lista con los valores únicos de la columnas "Evaluación"
         evaluaciones = list(df["Evaluación"].unique())
@@ -171,9 +185,9 @@ def data_base_genetic(df, cycle = ["CI","CII", "CIII", "CIV"], index_column = []
         #Creando lista del orden de las columnas
         columnas_sin_index = [f"{columna}_CI-{eval}" for eval in evaluaciones for columna in columnas_a_pivotear]
         
-        #Agregando index al orden de las columnas
         new_order = index_column_copy + columnas_sin_index
-        
+        print(f"Numero de columnas de el nuevo orden: {len(new_order)}")
+        print(f"Numero de columnas del pivotado: {len(list(pivot_df.columns))}")
         #Reordenando columnas
         pivot_df = pivot_df.reindex(columns = new_order)
         
