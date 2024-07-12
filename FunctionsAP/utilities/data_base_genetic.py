@@ -160,8 +160,6 @@ def data_base_genetic(df, cycle = ["CI","CII", "CIII", "CIV"], index_column = []
         
         #Definiendo columnas para repartir los pivot
         columnas_a_pivotear = lista_inted + lista_intercalada_calidad + lista_final
-
-        print(f"Numero de columnas de el columnas a pivotear: {len(columnas_a_pivotear)}")
         
         #Copiando index inicial
         index_column_copy = index_column.copy()
@@ -176,8 +174,6 @@ def data_base_genetic(df, cycle = ["CI","CII", "CIII", "CIV"], index_column = []
 
         # Reiniciar el índice si deseas que "EVALUAR" sea una columna
         pivot_df = pivot_df.reset_index()
-
-        print(pivot_df.columns)
         
         #Creando lista con los valores únicos de la columnas "Evaluación"
         evaluaciones = list(df["Evaluación"].unique())
@@ -186,8 +182,7 @@ def data_base_genetic(df, cycle = ["CI","CII", "CIII", "CIV"], index_column = []
         columnas_sin_index = [f"{columna}_CI-{eval}" for eval in evaluaciones for columna in columnas_a_pivotear]
         
         new_order = index_column_copy + columnas_sin_index
-        print(f"Numero de columnas de el nuevo orden: {len(new_order)}")
-        print(f"Numero de columnas del pivotado: {len(list(pivot_df.columns))}")
+        
         #Reordenando columnas
         pivot_df = pivot_df.reindex(columns = new_order)
         
