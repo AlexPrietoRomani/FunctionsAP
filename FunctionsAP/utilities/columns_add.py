@@ -5,7 +5,7 @@ import numpy as np
 def columns_add(dataframe, columns, name_column_new, type = ["Number", "Text"], drop = True):
     
     """
-      Crea un DataFrame a partir de archivos CSV en una carpeta.
+      Concatena columnas ya sean de tipo texto o número.
 
       Parámetros:
         dataframe: Dataframe que se usará para la función.
@@ -32,6 +32,10 @@ def columns_add(dataframe, columns, name_column_new, type = ["Number", "Text"], 
         #En caso alguna columna no sea tipo texto.      
         for column in columns:
           df[column] = df[column].astype(str)
+        
+        #En caso exista valores vacios en las columnas a unir, que estas queden como vacias.      
+        for column in columns:
+          df[column].replace("nan","", inplace=True)
         
         #En caso exista valores vacios en las columnas a unir, que estas queden como vacias.      
         for column in columns:
