@@ -111,13 +111,13 @@ def join_files(carpeta, column_types = None, time = False, type = [".csv", "xlsx
         if column_types is None:
           try:
             # Serie de pasos si column_types es None
-            df = pd.read_csv(ruta_archivo, encoding = codificacion)
+            df = pd.read_csv(ruta_archivo, encoding = codificacion, error_bad_lines=False)
           except Exception as e:
             print(f'Error al procesar el archivo {archivo}: {e}')
         else:
           try:
             # Serie de pasos si column_types tiene un valor
-            df = pd.read_csv(ruta_archivo, dtype = column_types, encoding = codificacion)
+            df = pd.read_csv(ruta_archivo, dtype = column_types, encoding = codificacion, error_bad_lines=False)
           except Exception as e:
             print(f'Error al procesar el archivo {archivo}: {e}')
 
