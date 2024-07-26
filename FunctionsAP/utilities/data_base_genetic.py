@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-def data_base_genetic(df, cycle = ["CI","CII", "CIII", "CIV"], index_column = [], column_calid = [], list_dic = {} ):
+def data_base_genetic(df, cycle = ["CI","CII", "CIII", "CIV"], index_column = [], column_calid_cualit = [], column_calid_cuantit = [], list_dic = {} ):
     """
     Procesa un DataFrame para generar un análisis genético de datos basado en evaluaciones y columnas de calidad.
     
@@ -9,7 +9,8 @@ def data_base_genetic(df, cycle = ["CI","CII", "CIII", "CIV"], index_column = []
         df (pd.DataFrame): DataFrame con los datos a procesar.
         cycle (str, optional): Ciclo de evaluación. El valor por defecto es "CI".
         index_column (list): Lista de columnas que se usarán como índice.
-        column_calid (list): Lista de columnas de calidad a procesar.
+        column_calid_cualit (list): Lista de columnas de calidad de tipo cualitativos a procesar.
+        column_calid_cuantit (list): Lista de columnas de calidad de tipo cuantitativos a procesar.
         list_dic (dict): Diccionario de mapeo para las columnas de calidad, se encuentran los nombres de las columnas junto con sus diccionarios de equivalencia:
 
     Returns:
@@ -18,7 +19,7 @@ def data_base_genetic(df, cycle = ["CI","CII", "CIII", "CIV"], index_column = []
             - pivot_df (pd.DataFrame): DataFrame pivotado con columnas evaluadas.
             - resumen (pd.DataFrame): DataFrame con el resumen de los cálculos y análisis.
     Raises:
-        TypeError: Si `index_column` no es una lista, `column_calid` no es una lista, o `list_dic` no es un diccionario.
+        TypeError: Si `index_column` no es una lista, `column_calid_cualit` no es una lista,`column_calid_cuantit` no es una lista, o `list_dic` no es un diccionario.
 
     Example:
         >>> df = pd.DataFrame({
@@ -34,7 +35,7 @@ def data_base_genetic(df, cycle = ["CI","CII", "CIII", "CIV"], index_column = []
         >>> list_dic = lista_diccionarios = {
             'Columna2': mapeo_Columna2,
             'Columna3': mapeo_Columna3}    
-        >>> data_base_genetic(df, index_column=index_column, column_calid=column_calid, list_dic=list_dic)
+        >>> data_base_genetic(df, cycle = "CI", index_column=index_column, column_calid_cualit = column_calid, list_dic=list_dic)
     """
     # Manejo de errores para los tipos de argumentos
     # Verificación de que index_column sea una lista
@@ -45,13 +46,23 @@ def data_base_genetic(df, cycle = ["CI","CII", "CIII", "CIV"], index_column = []
         if col not in df.columns:
             raise ValueError(f"La columna '{col}' de index_column no existe en el DataFrame.")
     
-    # Verificación de que column_calid sea una lista
-    if not isinstance(column_calid, list):
-        raise TypeError("column_calid debe ser una lista.")
-    # Verificación de que las columnas en column_calid existen en el DataFrame
-    for col in column_calid:
+    # Verificación de que column_calid_cualit sea una lista
+    if not isinstance(column_calid_cualit, list):
+        raise TypeError("column_calid_cualit debe ser una lista.")
+    # Verificación de que las columnas en column_calid_cualit existen en el DataFrame
+    for col in column_calid_cualit:
         if col not in df.columns:
-            raise ValueError(f"La columna '{col}' de column_calid no existe en el DataFrame.")
+            raise ValueError(f"La columna '{col}' de column_calid_cualit no existe en el DataFrame.")
+    
+    if cycle == "CIII":
+        # Verificación de que column_calid_cuantit sea una lista
+        if not isinstance(column_calid_cuantit, list):
+            raise TypeError("column_calid_cualit debe ser una lista.")
+        # Verificación de que las columnas en column_calid_cuantit existen en el DataFrame
+        for col in column_calid_cuantit:
+            if col not in df.columns:
+                raise ValueError(f"La columna '{col}' de column_calid_cuantit no existe en el DataFrame.")
+        
     # Verificación de que list_dic sea un diccionario
     if not isinstance(list_dic, dict):
         raise TypeError("list_dic debe ser un diccionario.")
@@ -80,7 +91,7 @@ def data_base_genetic(df, cycle = ["CI","CII", "CIII", "CIV"], index_column = []
     #Capturamos las posiciones iniciales y finales para la lista del indice, indiferente si está está desordenada
     posicion_inicial_calid = len(list_columns) + 1
     posición_final_calid = -1
-    for elemento in column_calid:
+    for elemento in column_calid_cualit:
         posicion_elemento = diccionario_posiciones[elemento]
         posicion_inicial_calid = min(posicion_inicial_calid, posicion_elemento)
         posición_final_calid = max(posición_final_calid, posicion_elemento)
@@ -88,22 +99,76 @@ def data_base_genetic(df, cycle = ["CI","CII", "CIII", "CIV"], index_column = []
     #Listas de columnas intermedias
     lista_inted = list_columns[int(posición_final_index+1):int(posicion_inicial_calid)]
     lista_final = list_columns[int(posición_final_calid+1):]
-        
+    
+    # Creando funciones que se necesitarán
+    ## Creando función que nos indica que se haya evaluado
+    def columna_presente(df, columna, new_column):
+        """
+        Crea una columna que contenga un valor de 1 si existe un número en la columna especificada y 0 si es NaN o nulo.
+
+        Args:
+            df: El `DataFrame` en el que se creará la columna.
+            columna: El nombre de la columna en la que se verificarán los valores.
+
+        Returns:
+            El `DataFrame` modificado con la nueva columna.
+        """
+
+        # Crea una nueva columna con el valor 1 por defecto.
+        df[new_column] = 1
+
+        # Reemplaza los valores NaN y nulos por 0.
+        df[new_column] = df[new_column].where(df[columna].notnull(), 0)
+
+        return df  
+    
+    def separar_por_categoria(lista, separadores=["-", "+", "*"]):
+        """
+        Separa una lista de elementos en sublistas según su categoría.
+
+        Args:
+            lista: La lista de elementos a separar.
+            separadores: Una lista de posibles separadores entre la categoría y el número.
+
+        Returns:
+            Un diccionario donde las claves son las categorías y los valores son las listas correspondientes.
+        """
+
+        separated_lists = {}
+
+        for item in lista:
+            # Encontrar el primer separador que coincida en el elemento
+            for sep in separadores:
+                parts = item.split(sep)
+                if len(parts) == 2:
+                    category, number = parts
+                    break
+            else:
+                # Si no se encontró ningún separador válido, saltar este elemento
+                continue
+
+            if category not in separated_lists:
+                separated_lists[category] = []
+            separated_lists[category].append(item)
+
+        return separated_lists
+    
+    # Comenzando la Bases de datos si se requiera para un Ciclo 1  
     if cycle == "CI":
-        ######  Parte 1: Dataframe de data (concatenado)  ####################################
+        ######  Parte 1: Dataframe de data (concatenado)    ####################################
         # Realizando interelación de columnas de calidad con diccionarios
         for col, mapeo in list_dic.items():
-            #Creando cariable para la nueva columna
+            #Creando Variable para la nueva columna
             nueva_col = f'{col}_#'
             #Realizando columna de el calculado
             df[nueva_col] = df[col].apply(lambda x: mapeo.get(x, None))
         
         #Creamos Variable con columnas a sumar
-        columnas_a_sumar = [f'{col}_#' for col in column_calid]
+        columnas_a_sumar = [f'{col}_#' for col in column_calid_cualit]
 
         #Reordenando columnas
         #Creando lista de lista de calidad categorica y numerica
-        lista_intercalada_calidad = [item for pair in zip(column_calid, columnas_a_sumar) for item in pair]
+        lista_intercalada_calidad = [item for pair in zip(column_calid_cualit, columnas_a_sumar) for item in pair]
         
         #Creando lista reordenada de las columnas
         orden_columnas = index_column + lista_inted + lista_intercalada_calidad + lista_final
@@ -117,27 +182,6 @@ def data_base_genetic(df, cycle = ["CI","CII", "CIII", "CIV"], index_column = []
         #Cambiando los "0" por NaN
         df["Suma de puntaje"].replace(0, np.nan, inplace=True)
         df["Traits evaluados"].replace(0, np.nan, inplace=True)
-        
-        #Creando función que nos indica que se haya evaluado
-        def columna_presente(df, columna, new_column):
-            """
-            Crea una columna que contenga un valor de 1 si existe un número en la columna especificada y 0 si es NaN o nulo.
-
-            Args:
-                df: El `DataFrame` en el que se creará la columna.
-                columna: El nombre de la columna en la que se verificarán los valores.
-
-            Returns:
-                El `DataFrame` modificado con la nueva columna.
-            """
-
-            # Crea una nueva columna con el valor 1 por defecto.
-            df[new_column] = 1
-
-            # Reemplaza los valores NaN y nulos por 0.
-            df[new_column] = df[new_column].where(df[columna].notnull(), 0)
-
-            return df
 
         #Creando columna con los traits totles evaluados
         df["Puntos"] = len(columnas_a_sumar)
@@ -165,9 +209,11 @@ def data_base_genetic(df, cycle = ["CI","CII", "CIII", "CIV"], index_column = []
         
         #Listas de columnas intermedias
         lista_inted = list_columns[int(posición_final_index+1):int(posicion_inicial_calid)]
+        
         ## Quitando valores a lista_inted
         lista_inted.remove("Evaluación")
         lista_inted.remove("Semana")
+        
         #Lista del final
         lista_final = list_columns[-4:]
         
@@ -195,7 +241,7 @@ def data_base_genetic(df, cycle = ["CI","CII", "CIII", "CIV"], index_column = []
         columnas_sin_index = [f"{columna}_CI-{eval}" for eval in evaluaciones for columna in columnas_a_pivotear]
         
         new_order = index_column_copy + columnas_sin_index
-        
+
         #Reordenando columnas
         pivot_df = pivot_df.reindex(columns = new_order)
         
@@ -249,5 +295,69 @@ def data_base_genetic(df, cycle = ["CI","CII", "CIII", "CIV"], index_column = []
         # Realizando cambios en la columna de "Promedio total ponderado CI"
         resumen["Promedio total ponderado CI"].replace(0,"se", inplace=True)
         resumen["Promedio total ponderado CI"].replace(np.nan,"se", inplace=True)
+    
+    # Comenzando la Bases de datos si se requiera para un Ciclo 3  
+    if cycle == "CIII":
+     ######  Parte 1: Dataframe de data (concatenado)    ####################################
+        # Realizando interelación de columnas de calidad con diccionarios
+        for col, mapeo in list_dic.items():
+            #Creando Variable para la nueva columna
+            nueva_col = f'{col}_#'
+            #Realizando columna de el calculado
+            df[nueva_col] = df[col].apply(lambda x: mapeo.get(x, None))
+        
+        #Creamos Variable con columnas a sumar
+        columnas_a_sumar = [f'{col}_#' for col in column_calid_cualit]
+
+        #Reordenando columnas
+        #Creando lista de lista de calidad categorica y numerica
+        lista_intercalada_calidad_culit = [item for pair in zip(column_calid_cualit, columnas_a_sumar) for item in pair]
+        
+        #Creando lista reordenada de las columnas
+        orden_columnas = index_column + lista_inted + lista_intercalada_calidad_culit + lista_final 
+        
+        #Función para sumar columnas de la variable
+        df["Suma de puntaje"] = df[columnas_a_sumar].sum(axis=1,skipna=True)
+
+        #Realizamos el conteo de las columnas a sumar omitiendo los vacios
+        df["Traits evaluados"] = df[columnas_a_sumar].count(axis=1)
+
+        #Cambiando los "0" por NaN
+        df["Suma de puntaje"].replace(0, np.nan, inplace=True)
+        df["Traits evaluados"].replace(0, np.nan, inplace=True)
+
+        #Creando columna con los traits totles evaluados
+        df["Puntos"] = len(columnas_a_sumar)
+
+        #Creando la columna en base a la función creada
+        df = columna_presente(df, 'Suma de puntaje','Evaluados')
+        
+        # Añadiendo columnas que se agregaron como calculadas
+        orden_columnas = orden_columnas + ["Suma de puntaje","Traits evaluados","Puntos",'Evaluados']
+        
+        # Agrupando las columnas de los valores cuantitativas para realizar los calculos de media y desviación estandar
+        ## Agrupando las columnas en un diccionario
+        resultado = separar_por_categoria(column_calid_cuantit)
+        
+        # Lista para mantener el nuevo orden de columnas
+        nuevo_orden = []
+
+        ## Creando la iteración en el diccionario que tiene la clave con las listas de columnas
+        for keys, lista in resultado.items():
+            df[f"{keys}_mean"] = df[lista].mean(axis=1, skipna=True)
+            df[f"{keys}_desv. est."] = df[lista].std(axis=1, skipna=True)
+            nuevo_orden.extend(lista + [f"{keys}_mean", f"{keys}_desv. est."])
+        
+        #Agregando el orden de las columnas de calidad cuantitativa
+        orden_columnas = orden_columnas + nuevo_orden
+        
+        #Reordenando columnas
+        df = df.reindex(columns = orden_columnas)
+        
+        #Copiando df a un nuevo dataframe
+        dataframe = df.copy()
+        
+        ######  Parte 2: Base de datos  ########################################################
+        
         
     return dataframe, pivot_df, resumen
