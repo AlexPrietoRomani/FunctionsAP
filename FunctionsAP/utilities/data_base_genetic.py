@@ -295,9 +295,12 @@ def data_base_genetic(df, cycle = ["CI","CII", "CIII", "CIV"], index_column = []
         # Realizando cambios en la columna de "Promedio total ponderado CI"
         resumen["Promedio total ponderado CI"].replace(0,"se", inplace=True)
         resumen["Promedio total ponderado CI"].replace(np.nan,"se", inplace=True)
-    
+
+        # Retornamos los valores de el dataframe de consolidado, database en columnas y el resumen
+        return   dataframe, pivot_df, resumen
+
     # Comenzando la Bases de datos si se requiera para un Ciclo 3  
-    if cycle == "CIII":
+    elif cycle == "CIII":
      ######  Parte 1: Dataframe de data (concatenado)    ####################################
         # Realizando interelación de columnas de calidad con diccionarios
         for col, mapeo in list_dic.items():
@@ -348,6 +351,10 @@ def data_base_genetic(df, cycle = ["CI","CII", "CIII", "CIV"], index_column = []
             df[f"{keys}_desv. est."] = df[lista].std(axis=1, skipna=True)
             nuevo_orden.extend(lista + [f"{keys}_mean", f"{keys}_desv. est."])
         
+        # Reemplazando los valores 0 de la colección de medias y desviaciones a vacios
+        for colum in nuevo_orden:
+            df[colum].replace(0,np.nan, inplace = True)
+        
         #Agregando el orden de las columnas de calidad cuantitativa
         orden_columnas = orden_columnas + nuevo_orden
         
@@ -360,4 +367,4 @@ def data_base_genetic(df, cycle = ["CI","CII", "CIII", "CIV"], index_column = []
         ######  Parte 2: Base de datos  ########################################################
         
         
-    return dataframe, pivot_df, resumen
+    return   dataframe
