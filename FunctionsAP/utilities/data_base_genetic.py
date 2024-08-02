@@ -10,9 +10,10 @@ def data_base_genetic(df, cycle = ["CI","CII", "CIII", "CIV"], index_column = []
         cycle (str, optional): Ciclo de evaluación. El valor por defecto es "CI".
         index_column (list): Lista de columnas que se usarán como índice.
         column_calid_cualit (list): Lista de columnas de calidad de tipo cualitativos a procesar.
-        column_calid_cuantit (list): Lista de columnas de calidad de tipo cuantitativos a procesar.
+        column_calid_cuantit (list): Lista de columnas de calidad de tipo cuantitativos a procesar.(Tener en cuenta que las columnas de esta lista deben estar al final del dataframe)
         list_dic (dict): Diccionario de mapeo para las columnas de calidad, se encuentran los nombres de las columnas junto con sus diccionarios de equivalencia:
-
+        Orden de las columnas: index_colum - column_calid_cualit - column_calid_cuantit
+        
     Returns:
         tuple: Tupla con tres elementos:
             - dataframe (pd.DataFrame): DataFrame original con columnas reordenadas y nuevas columnas calculadas, solo es la concatenación con calculos
@@ -99,6 +100,8 @@ def data_base_genetic(df, cycle = ["CI","CII", "CIII", "CIV"], index_column = []
     #Listas de columnas intermedias
     lista_inted = list_columns[int(posición_final_index+1):int(posicion_inicial_calid)]
     lista_final = list_columns[int(posición_final_calid+1):]
+    if cycle == "CIII":
+        lista_final = [elemento for elemento in lista_final if elemento not in column_calid_cuantit]
     
     # Creando funciones que se necesitarán
     ## Creando función que nos indica que se haya evaluado
