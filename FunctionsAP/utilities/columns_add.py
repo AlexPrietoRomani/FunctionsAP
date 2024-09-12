@@ -42,12 +42,16 @@ def columns_add(dataframe, columns, name_column_new, type="Number", drop=True, s
         # Realizar la operación aritmética especificada
         if operation == "sum":
             df[temp_column_name] = df[columns].sum(axis=1, skipna=True)
+            df[temp_column_name] = df[temp_column_name].where(df[columns].notna().any(axis=1), np.nan)
         elif operation == "mean":
             df[temp_column_name] = df[columns].mean(axis=1, skipna=True)
+            df[temp_column_name] = df[temp_column_name].where(df[columns].notna().any(axis=1), np.nan)
         elif operation == "prod":
             df[temp_column_name] = df[columns].prod(axis=1, skipna=True)
+            df[temp_column_name] = df[temp_column_name].where(df[columns].notna().any(axis=1), np.nan)
         else:
             raise ValueError(f"Operación '{operation}' no soportada para columnas numéricas.")
+
 
     elif type.lower() == "text":
         # Concatenar columnas de texto con el separador especificado
