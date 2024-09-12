@@ -2,61 +2,65 @@ import pandas as pd
 import numpy as np
 
 #Creando funciones para suma de dos columnas de un dataframe
-def columns_add(dataframe, columns, name_column_new, type = ["Number", "Text"], drop = True):
+def columns_add(dataframe, columns, name_column_new, type="Number", drop=True, separator="", operation="sum"):
     
     """
-      Concatena columnas ya sean de tipo texto o número.
+    Concatena o suma columnas del DataFrame, ya sean de tipo texto o número.
 
-      Parámetros:
-        dataframe: Dataframe que se usará para la función.
-        columns: Columnas que se quiera agregar o sumar.
-        name_column_new: Nombre de la columna nueva que se quiere crear.
-        type: Tipo de las columnas que se queiren agregar o sumar. Por defecto se queda como "float"
-        drop: Argumento en el cual se especifica que los argumentos "columns" serán eliminados o no. Por defecto queda como "True"
+    Parámetros:
+      dataframe: DataFrame que se usará para la función.
+      columns: Lista de nombres de columnas que se quiere agregar o sumar.
+      name_column_new: Nombre de la columna nueva que se quiere crear.
+      type: Tipo de las columnas que se quiere agregar o sumar ("Number" o "Text").
+      drop: Booleano que indica si las columnas originales deben ser eliminadas (default=True).
+      separator: Separador para concatenar texto (solo aplica si type="Text").
+      operation: Operación aritmética a realizar (sum, mean, prod), solo para type="Number".
 
-      Devuelve:
-        Un DataFrame en el cual se contiene la columna nueva. Si se requiere se elimina las anteriores.
+    Devuelve:
+      Un DataFrame que contiene la columna nueva. Si se requiere, elimina las columnas originales.
     """
-    
-    #Copiando dataframe para no afectar a el dataframe final
+    # Validar que 'columns' sea una lista
+    if not isinstance(columns, list):
+        raise TypeError("El argumento 'columns' debe ser una lista de nombres de columnas.")
+
+    # Validar el parámetro type
+    if type.lower() not in ["number", "text"]:
+        raise ValueError("El argumento 'type' debe ser 'Number' o 'Text'.")
+
+    # Validar que todas las columnas existen en el DataFrame
+    missing_columns = [col for col in columns if col not in dataframe.columns]
+    if missing_columns:
+        raise ValueError(f"Las siguientes columnas no se encontraron en el DataFrame: {missing_columns}")
+
+    # Copiar el DataFrame para no afectar el original
     df = dataframe.copy()
-    
-    #Creando condicional para el argumento "type"
-    if type == "Number":
-        "" 
-        #Devolviendo columna nueva.
-        df["CoL$&$umNa_칩CreADA"] = df[columns].sum(axis = 1)
-         
-    if type == "Text":
-        
-        #En caso alguna columna no sea tipo texto.      
-        for column in columns:
-          df[column] = df[column].astype(str)
-        
-        #En caso exista valores vacios en las columnas a unir, que estas queden como vacias.      
-        for column in columns:
-          df[column].replace("nan","", inplace=True)
-        
-        #En caso exista valores vacios en las columnas a unir, que estas queden como vacias.      
-        for column in columns:
-          df[column].fillna("",inplace=True)
-        
-        #Creando formula para poder sumar columnas indiferente cuantas columnas existan
-        formula = "+".join(["df['" + column + "']" for column in columns])
-        
-        #Devolviendo columna nueva.
-        df["CoL$&$umNa_칩CreADA"] = eval(formula)
-        
-    #Creando condicional para el argumento "drop"
-    if drop == True:
-      
-      #Eliminando columnas utilizadas
-      df.drop(columns = columns, inplace=True)
-    
-    #Cambiando nombre de la columna a la especificada según el argumento "name_column_new"
-    df.rename(columns = {"CoL$&$umNa_칩CreADA":name_column_new}, inplace = True)
-    
-    # Retornando el dataframe  
+
+    # Definir un nombre temporal para evitar colisiones con columnas existentes
+    temp_column_name = f"CoL$&$umNa_칩CreADA_{name_column_new}"
+
+    if type.lower() == "number":
+        # Realizar la operación aritmética especificada
+        if operation == "sum":
+            df[temp_column_name] = df[columns].sum(axis=1, skipna=False)
+        elif operation == "mean":
+            df[temp_column_name] = df[columns].mean(axis=1, skipna=False)
+        elif operation == "prod":
+            df[temp_column_name] = df[columns].prod(axis=1, skipna=False)
+        else:
+            raise ValueError(f"Operación '{operation}' no soportada para columnas numéricas.")
+
+    elif type.lower() == "text":
+        # Concatenar columnas de texto con el separador especificado
+        df[temp_column_name] = df[columns].astype(str).replace("nan", "").apply(lambda row: separator.join(row), axis=1)
+
+    # Eliminar columnas originales si se especifica drop=True
+    if drop:
+        df.drop(columns=columns, inplace=True)
+
+    # Cambiar el nombre de la columna temporal a la especificada según el argumento "name_column_new"
+    if temp_column_name in df.columns:
+        df.rename(columns={temp_column_name: name_column_new}, inplace=True)
+
     return df
 
   
