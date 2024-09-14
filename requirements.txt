@@ -3,4 +3,5 @@ numpy
 openpyxl
 chardet
 zscore
+pytz
 python-dateutil
