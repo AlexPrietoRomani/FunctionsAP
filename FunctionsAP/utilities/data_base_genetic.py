@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-def data_base_genetic(df, cycle = ["CI","CII", "CIII", "CIV"], index_column = [], column_calid_cualit = [], column_calid_cuantit = [], list_dic = {} ):
+def data_base_genetic(original_data, cycle = ["CI","CII", "CIII", "CIV"], index_column = [], column_calid_cualit = [], column_calid_cuantit = [], list_dic = {} ):
     """
     Procesa un DataFrame para generar un análisis genético de datos basado en evaluaciones y columnas de calidad.
     
@@ -72,6 +72,9 @@ def data_base_genetic(df, cycle = ["CI","CII", "CIII", "CIV"], index_column = []
         if not isinstance(value, dict):
             raise TypeError(f"El valor asociado a la clave '{key}' en list_dic debe ser un diccionario.")
 
+    # Realizando copia del dataframe
+    df = original_data.copy()
+    
     # Obteniendo nombres de las columnas del dataframe
     list_columns = list(df.columns)
     
@@ -218,10 +221,10 @@ def data_base_genetic(df, cycle = ["CI","CII", "CIII", "CIV"], index_column = []
         lista_inted.remove("Semana")
         
         #Lista del final
-        lista_final = list_columns[-4:]
+        lista_4_ultimos = list_columns[-4:]
         
         #Definiendo columnas para repartir los pivot
-        columnas_a_pivotear = lista_inted + lista_intercalada_calidad + lista_final
+        columnas_a_pivotear = lista_inted + lista_intercalada_calidad + lista_final + lista_4_ultimos
         
         #Copiando index inicial
         index_column_copy = index_column.copy()
@@ -304,7 +307,7 @@ def data_base_genetic(df, cycle = ["CI","CII", "CIII", "CIV"], index_column = []
 
     # Comenzando la Bases de datos si se requiera para un Ciclo 3  
     elif cycle == "CIII":
-     ######  Parte 1: Dataframe de data (concatenado)    ####################################
+    ######  Parte 1: Dataframe de data (concatenado)    ####################################
         # Realizando interelación de columnas de calidad con diccionarios
         for col, mapeo in list_dic.items():
             #Creando Variable para la nueva columna
