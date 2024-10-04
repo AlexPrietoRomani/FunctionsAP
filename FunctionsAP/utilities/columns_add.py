@@ -81,7 +81,7 @@ def columns_add(dataframe, columns, name_column_new=None, type="Number", drop=Tr
     elif type.lower() == "text":
         # Concatenar columnas de texto con el separador especificado
         if operation == "concat":
-            df[temp_column_name] = df[columns].astype(str).fillna('').agg(separator.join, axis=1)
+            df[temp_column_name] = df[columns].astype(str).replace(['', 'nan', 'None'], np.nan).fillna('').agg(separator.join, axis=1)
         elif operation == "first":
             df[temp_column_name] = df[columns].astype(str).replace(['', 'nan', 'None'], np.nan).bfill(axis=1).iloc[:, 0]
         else:
