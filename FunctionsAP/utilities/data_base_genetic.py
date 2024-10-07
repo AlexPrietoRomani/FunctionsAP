@@ -38,6 +38,9 @@ def data_base_genetic(original_data, cycle = ["CI","CII", "CIII", "CIV"], index_
             'Columna3': mapeo_Columna3}    
         >>> data_base_genetic(df, cycle = "CI", index_column=index_column, column_calid_cualit = column_calid, list_dic=list_dic)
     """
+    # Realizando copia del dataframe
+    df = original_data.copy()
+    
     # Manejo de errores para los tipos de argumentos
     # Verificación de que index_column sea una lista
     if not isinstance(index_column, list):
@@ -71,9 +74,6 @@ def data_base_genetic(original_data, cycle = ["CI","CII", "CIII", "CIV"], index_
     for key, value in list_dic.items():
         if not isinstance(value, dict):
             raise TypeError(f"El valor asociado a la clave '{key}' en list_dic debe ser un diccionario.")
-
-    # Realizando copia del dataframe
-    df = original_data.copy()
     
     # Obteniendo nombres de las columnas del dataframe
     list_columns = list(df.columns)
