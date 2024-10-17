@@ -1,7 +1,11 @@
+import matplotlib
+matplotlib.use('agg')  # Cambiar el backend a uno adecuado para entornos sin GUI
+
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
 import pandas as pd
+
 
 class FieldLayout:
     def __init__(self, book, plan):
