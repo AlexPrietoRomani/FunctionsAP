@@ -17,7 +17,10 @@ def join_files(
     default_timezone: str = 'UTC',
     encodings: Optional[List[str]] = None,
     stop_on_error: bool = False,
-    chunksize: Optional[int] = None
+    chunksize: Optional[int] = None,
+    suffix_index: Optional[int] = None,
+    suffix_delimiter: str = "_",
+    suffix_filter: Optional[str] = None
 ) -> pd.DataFrame:
     """
     Crea un DataFrame a partir de archivos CSV o Excel en una carpeta.
@@ -29,19 +32,24 @@ def join_files(
         file_extensions: Lista de extensiones de archivo a procesar. Por defecto es ['.csv', '.xlsx'].
         default_timezone: Zona horaria por defecto para las fechas.
         encodings: Lista de codificaciones a intentar al leer los archivos. Por defecto es ['utf-8', 'latin-1'].
-        stop_on_error: Indica si el proceso debe detenerse al encontrar un error. Por defecto es False.
-        chunksize: Número de filas a leer por iteración. Útil para archivos grandes. Por defecto es None.
+        stop_on_error: Indica si el proceso debe detenerse al encontrar un error.
+        chunksize: Número de filas a leer por iteración (útil para archivos grandes).
+        suffix_index: Si se especifica, extrae del nombre del archivo (sin extensión) el token en la posición dada al dividir por *suffix_delimiter*.
+                      Ejemplo: -1 extrae el último token.
+        suffix_delimiter: Delimitador a usar para separar el nombre del archivo. Por defecto "_".
+        suffix_filter: Si se especifica, solo se leerán los archivos cuyo token extraído (usando suffix_index y suffix_delimiter)
+                       sea igual a este valor (por ejemplo, "database").
 
     Devuelve:
-        Un DataFrame que contiene los datos de todos los archivos en la carpeta.
+        Un DataFrame que contiene los datos de todos los archivos en la carpeta que cumplen con los criterios.
     """
     # Configurar el logger
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger(__name__)
 
+    # Establecer extensiones y codificaciones por defecto si no se han pasado
     if file_extensions is None:
         file_extensions = ['.csv', '.xlsx']
-
     if encodings is None:
         encodings = ['utf-8', 'latin-1']
 
@@ -51,11 +59,9 @@ def join_files(
             logger.error(f"La ruta {folder_path} no es una carpeta válida.")
             return pd.DataFrame()
 
-        # Obtener la lista de archivos con las extensiones especificadas
+        # Obtener la lista de archivos que tengan una de las extensiones especificadas
         file_list = [f for f in folder.iterdir() if f.suffix.lower() in file_extensions]
-
         num_files = len(file_list)
-
         if num_files == 0:
             logger.warning("No se encontraron archivos en la carpeta.")
             return pd.DataFrame()
@@ -66,16 +72,15 @@ def join_files(
         for file_path in file_list:
             file_name = file_path.name
 
-            # Verificar si es un archivo regular y no está vacío
+            # Verificar si es un archivo regular y que no esté vacío
             if not file_path.is_file():
                 logger.warning(f"Saltando {file_name}, no es un archivo regular.")
                 continue
-
             if file_path.stat().st_size == 0:
                 logger.warning(f"El archivo {file_name} está vacío.")
                 continue
 
-            # Extraer la fecha del nombre del archivo si es necesario
+            # Extraer la fecha del nombre del archivo si se solicita
             date_obj = None
             if include_date:
                 try:
@@ -93,7 +98,22 @@ def join_files(
                     else:
                         continue
 
-            # Leer el archivo en un DataFrame
+            # Extraer el sufijo del nombre del archivo si se especifica suffix_index
+            add_suffix = False
+            if suffix_index is not None:
+                file_stem = file_path.stem  # Nombre sin extensión
+                tokens = file_stem.split(suffix_delimiter)
+                if len(tokens) > abs(suffix_index):
+                    suffix_value = tokens[suffix_index]
+                    # Si se especifica un filtro, solo procesamos si coincide
+                    if suffix_filter is not None and suffix_value != suffix_filter:
+                        logger.info(f"Saltando {file_name}: token '{suffix_value}' no coincide con el filtro '{suffix_filter}'.")
+                        continue
+                    add_suffix = True
+                else:
+                    logger.warning(f"No se pudo extraer el sufijo con índice {suffix_index} del archivo {file_name}.")
+
+            # Intentar leer el archivo en un DataFrame
             try:
                 df = read_file(
                     file_path=file_path,
@@ -108,9 +128,13 @@ def join_files(
                 else:
                     continue
 
-            # Agregar la fecha al DataFrame si se extrajo correctamente
+            # Agregar la fecha extraída, si corresponde
             if include_date and date_obj:
                 df['Fecha'] = date_obj
+
+            # Agregar el sufijo extraído al DataFrame, si corresponde
+            if add_suffix:
+                df['Suffix'] = suffix_value
 
             dataframes.append(df)
             files_processed += 1
@@ -144,7 +168,7 @@ def extract_date_from_filename(file_name: str, default_timezone: str) -> datetim
         r'\d{8}',  # YYYYMMDD
         r'\d{4}[-/]\d{3}'  # YYYY-DDD (día juliano)
     ]
-
+    
     for pattern in date_patterns:
         matches = re.findall(pattern, file_name)
         if matches:
@@ -210,6 +234,6 @@ def read_file(
         except (UnicodeDecodeError, ValueError) as e:
             logging.warning(f"Error al leer {file_name} con codificación {encoding}: {e}")
             continue  # Intentar con la siguiente codificación
-
+    
     # Si ninguna codificación funcionó, lanzar excepción
     raise ValueError(f"No se pudo leer el archivo {file_name} con las codificaciones proporcionadas.")
