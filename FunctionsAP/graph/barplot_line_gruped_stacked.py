@@ -11,10 +11,10 @@ def barplot_line_grouped_stacked(
     orden_deseado: list = None,                # Orden deseado para los grupos (si se especifica)
     x_exclude: list = None,                    # Lista de valores a excluir en el eje x (por ejemplo, [46])
     line_cols: list = None,                    # Lista de columnas para graficar líneas (puede ser 1, 2 o 3)
-    figsize: tuple = (15, 8),
-    wspace: float = 0.1,
-    save_fig: bool = False,
-    fig_path: str = None,
+    figsize: tuple = (15, 8),                  # Tamaño de la figura general
+    wspace: float = 0.1,                       # Espacio entre cada sub grafico
+    save_fig: bool = False,                    # Opción para realizar guardado de figura
+    fig_path: str = None,                      # Ruta especifica de donde se realizará el guardado de la imagen, especificar formato.
     stacked_colors: list = None,               # Colores para las barras apiladas
     line_colors: list = None                   # Colores para las líneas (si hay más de una)
 ) -> None:
