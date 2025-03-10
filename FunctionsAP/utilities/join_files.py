@@ -7,6 +7,7 @@ from dateutil import parser
 from dateutil.parser import ParserError
 import pytz
 import logging
+import unicodedata
 from typing import List, Dict, Optional, Union
 
 def join_files(
@@ -43,7 +44,7 @@ def join_files(
         suffix_filter: Si se especifica, solo se leerán los archivos cuyo token extraído (usando suffix_index y suffix_delimiter)
                        sea igual a este valor (por ejemplo, "database").
         normalize_columns: Si es True, se realiza pre procesamiento de nombres de columnas, unificando columnas que sean iguales
-                           ignorando mayúsculas y espacios.
+                           ignorando mayúsculas, espacios y acentos.
 
     Devuelve:
         Un DataFrame que contiene los datos de todos los archivos en la carpeta que cumplen con los criterios.
@@ -249,10 +250,17 @@ def read_file(
     # Si ninguna codificación funcionó, lanzar excepción
     raise ValueError(f"No se pudo leer el archivo {file_name} con las codificaciones proporcionadas.")
 
+def remove_accents(input_str: str) -> str:
+    """
+    Elimina los acentos de la cadena de caracteres.
+    """
+    nfkd_form = unicodedata.normalize('NFKD', input_str)
+    return "".join([c for c in nfkd_form if not unicodedata.combining(c)])
+
 def normalize_and_merge_columns(df: pd.DataFrame) -> pd.DataFrame:
     """
     Normaliza los nombres de las columnas eliminando espacios al inicio y al final,
-    convirtiendo a un formato insensible a mayúsculas y minúsculas, y unificando columnas
+    removiendo acentos, convirtiendo a minúsculas (para comparar) y unificando columnas
     que resulten iguales tras la normalización. El nombre final tendrá la primera letra en mayúscula.
 
     Parámetros:
@@ -262,7 +270,8 @@ def normalize_and_merge_columns(df: pd.DataFrame) -> pd.DataFrame:
         Un nuevo DataFrame con los nombres de columnas normalizados y columnas duplicadas fusionadas.
     """
     # Crear un mapeo: nombre original -> nombre normalizado
-    normalized_map = {col: col.strip().lower().capitalize() for col in df.columns}
+    normalized_map = {col: remove_accents(col.strip()).lower().capitalize() for col in df.columns}
+    
     # Invertir el mapeo para agrupar columnas que se normalizan igual
     groups = {}
     for original, norm in normalized_map.items():
