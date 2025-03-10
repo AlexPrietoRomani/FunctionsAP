@@ -40,14 +40,14 @@ def procesar_valores(
       - pd.DataFrame: DataFrame modificado con los valores procesados.
     
     Ejemplos:
-        # Ejemplo 1: Reemplazar en todas las columnas los valores 0 por np.nan.
-        # df_limpio = procesar_valores(df, replace_map={0: np.nan}, convertir_vacios=False)
+        - Ejemplo 1: Reemplazar en todas las columnas los valores 0 por np.nan.
+        - df_limpio = procesar_valores(df, replace_map={0: np.nan}, convertir_vacios=False)
 
-        # Ejemplo 2: Solo en las columnas "A" y "B", convertir cadenas vacías y "None" a np.nan, y eliminar espacios.
-        # df_limpio2 = procesar_valores(df, columnas=["A", "B"], convertir_vacios=True, trim_strings=True)
+        - Ejemplo 2: Solo en las columnas "A" y "B", convertir cadenas vacías y "None" a np.nan, y eliminar espacios.
+        - df_limpio2 = procesar_valores(df, columnas=["A", "B"], convertir_vacios=True, trim_strings=True)
 
-        # Ejemplo 3: En todas las columnas, convertir vacíos a np.nan, rellenar NaN con 0, y convertir la columna "edad" a entero.
-        # df_limpio3 = procesar_valores(df, convertir_vacios=True, fill_missing=True, fill_value=0, convertir_tipo={"edad": int})
+        - Ejemplo 3: En todas las columnas, convertir vacíos a np.nan, rellenar NaN con 0, y convertir la columna "edad" a entero.
+        - df_limpio3 = procesar_valores(df, convertir_vacios=True, fill_missing=True, fill_value=0, convertir_tipo={"edad": int})
     """
     # Configurar logger básico
     logging.basicConfig(level=logging.INFO)
