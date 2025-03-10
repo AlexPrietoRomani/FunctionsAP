@@ -13,6 +13,7 @@ def join_files(
     folder_path: Union[str, Path],
     column_types: Optional[Dict[str, type]] = None,
     include_date: bool = False,
+    date_column: str = 'Fecha',
     file_extensions: Optional[List[str]] = None,
     default_timezone: str = 'UTC',
     encodings: Optional[List[str]] = None,
@@ -20,7 +21,8 @@ def join_files(
     chunksize: Optional[int] = None,
     suffix_index: Optional[int] = None,
     suffix_delimiter: str = "_",
-    suffix_filter: Optional[str] = None
+    suffix_filter: Optional[str] = None,
+    normalize_columns: bool = False
 ) -> pd.DataFrame:
     """
     Crea un DataFrame a partir de archivos CSV o Excel en una carpeta.
@@ -29,6 +31,7 @@ def join_files(
         folder_path: Ruta a la carpeta que contiene los archivos.
         column_types: Diccionario que define los tipos de datos de las columnas al leer.
         include_date: Indica si se debe capturar la fecha del nombre de los archivos.
+        date_column: Nombre de la columna donde se colocará la fecha extraída. Por defecto 'Fecha'.
         file_extensions: Lista de extensiones de archivo a procesar. Por defecto es ['.csv', '.xlsx'].
         default_timezone: Zona horaria por defecto para las fechas.
         encodings: Lista de codificaciones a intentar al leer los archivos. Por defecto es ['utf-8', 'latin-1'].
@@ -39,6 +42,8 @@ def join_files(
         suffix_delimiter: Delimitador a usar para separar el nombre del archivo. Por defecto "_".
         suffix_filter: Si se especifica, solo se leerán los archivos cuyo token extraído (usando suffix_index y suffix_delimiter)
                        sea igual a este valor (por ejemplo, "database").
+        normalize_columns: Si es True, se realiza pre procesamiento de nombres de columnas, unificando columnas que sean iguales
+                           ignorando mayúsculas y espacios.
 
     Devuelve:
         Un DataFrame que contiene los datos de todos los archivos en la carpeta que cumplen con los criterios.
@@ -128,9 +133,13 @@ def join_files(
                 else:
                     continue
 
-            # Agregar la fecha extraída, si corresponde
+            # Preprocesar los nombres de columnas si se solicita
+            if normalize_columns:
+                df = normalize_and_merge_columns(df)
+
+            # Agregar la fecha extraída, si corresponde, y convertirla a datetime sin zona horaria
             if include_date and date_obj:
-                df['Fecha'] = date_obj
+                df[date_column] = date_obj.replace(tzinfo=None)
 
             # Agregar el sufijo extraído al DataFrame, si corresponde
             if add_suffix:
@@ -216,6 +225,8 @@ def read_file(
                         encoding=encoding,
                         chunksize=chunksize
                     )
+                    # Si se usa chunksize, concatenar los chunks
+                    df = pd.concat(df, ignore_index=True)
                 else:
                     df = pd.read_csv(
                         file_path,
@@ -237,3 +248,31 @@ def read_file(
     
     # Si ninguna codificación funcionó, lanzar excepción
     raise ValueError(f"No se pudo leer el archivo {file_name} con las codificaciones proporcionadas.")
+
+def normalize_and_merge_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Normaliza los nombres de las columnas eliminando espacios al inicio y al final,
+    convirtiendo a un formato insensible a mayúsculas y minúsculas, y unificando columnas
+    que resulten iguales tras la normalización. El nombre final tendrá la primera letra en mayúscula.
+
+    Parámetros:
+        df: DataFrame original.
+
+    Devuelve:
+        Un nuevo DataFrame con los nombres de columnas normalizados y columnas duplicadas fusionadas.
+    """
+    # Crear un mapeo: nombre original -> nombre normalizado
+    normalized_map = {col: col.strip().lower().capitalize() for col in df.columns}
+    # Invertir el mapeo para agrupar columnas que se normalizan igual
+    groups = {}
+    for original, norm in normalized_map.items():
+        groups.setdefault(norm, []).append(original)
+    
+    new_df = pd.DataFrame(index=df.index)
+    for norm_name, cols in groups.items():
+        if len(cols) == 1:
+            new_df[norm_name] = df[cols[0]]
+        else:
+            # Fusionar columnas: para cada fila, tomar el primer valor no nulo de las columnas duplicadas
+            new_df[norm_name] = df[cols].bfill(axis=1).iloc[:, 0]
+    return new_df
