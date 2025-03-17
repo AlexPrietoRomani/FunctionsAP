@@ -97,10 +97,12 @@ def columns_add(
     elif type.lower() == "text":
         # Convertir las columnas a string, reemplazar cadenas vacías o "nan" por NaN, y concatenar
         if operation == "concat":
-            df[temp_column_name] = df[columns].astype(str)\
-                .replace(['', 'nan', 'None'], np.nan)\
-                .fillna('')\
-                .agg(separator.join, axis=1)
+            df[temp_column_name] = df[columns].apply(
+                lambda row: separator.join(
+                    [str(x) for x in row if str(x).lower() not in ['', 'nan', 'none']]
+                ) if not all(str(x).lower() in ['', 'nan', 'none'] for x in row) else separator,
+                axis=1
+                ).replace(separator,np.nan)
         elif operation == "first":
             df[temp_column_name] = df[columns].astype(str)\
                 .replace(['', 'nan', 'None'], np.nan)\
