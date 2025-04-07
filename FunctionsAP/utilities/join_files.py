@@ -23,7 +23,8 @@ def join_files(
     suffix_index: Optional[int] = None,
     suffix_delimiter: str = "_",
     suffix_filter: Optional[str] = None,
-    normalize_columns: bool = False
+    normalize_columns: bool = False,
+    separators: Optional[Union[str, List[str]]] = None
 ) -> pd.DataFrame:
     """
     Crea un DataFrame a partir de archivos CSV o Excel en una carpeta.
@@ -45,7 +46,8 @@ def join_files(
                        sea igual a este valor (por ejemplo, "database").
         normalize_columns: Si es True, se realiza pre procesamiento de nombres de columnas, unificando columnas que sean iguales
                            ignorando mayúsculas, espacios y acentos.
-
+        separators: Separador o lista de separadores para archivos CSV. Por defecto es ",".
+    
     Devuelve:
         Un DataFrame que contiene los datos de todos los archivos en la carpeta que cumplen con los criterios.
     """
@@ -125,7 +127,8 @@ def join_files(
                     file_path=file_path,
                     column_types=column_types,
                     encodings=encodings,
-                    chunksize=chunksize
+                    chunksize=chunksize,
+                    separators=separators
                 )
             except Exception as e:
                 logger.error(f"Error al leer el archivo {file_name}: {e}")
@@ -151,7 +154,9 @@ def join_files(
 
         if dataframes:
             df_final = pd.concat(dataframes, ignore_index=True)
-            logger.info(f"Se leyeron correctamente {files_processed} de {num_files} archivos.")
+            folder_name = Path(folder_path).name
+            logger.info(f"Se leyeron correctamente {files_processed} de {num_files} archivos de la carpeta '{folder_name}'.")
+
             return df_final
         else:
             logger.warning("No se pudieron crear DataFrames a partir de los archivos.")
@@ -201,7 +206,8 @@ def read_file(
     file_path: Path,
     column_types: Optional[Dict[str, type]],
     encodings: List[str],
-    chunksize: Optional[int]
+    chunksize: Optional[int],
+    separators: Optional[Union[str, List[str]]] = None
 ) -> pd.DataFrame:
     """
     Lee un archivo CSV o Excel en un DataFrame.
@@ -209,46 +215,119 @@ def read_file(
     Parámetros:
         file_path: Ruta al archivo.
         column_types: Diccionario de tipos de datos para las columnas.
-        encodings: Lista de codificaciones a intentar.
-        chunksize: Número de filas a leer por iteración.
-
+        encodings: Lista de codificaciones para intentar al leer el archivo.
+        chunksize: Número de filas a leer por iteración (útil para archivos grandes).
+        separators: Separador o lista de separadores para archivos CSV. Por defecto es ",".
+    
     Devuelve:
         Un DataFrame con los datos del archivo.
     """
     file_name = file_path.name
-    for encoding in encodings:
-        try:
-            if file_path.suffix.lower() == '.csv':
+
+    # Si el archivo es CSV, se intentará leer usando los separadores proporcionados
+    if file_path.suffix.lower() == '.csv':
+        # Preparar la lista de separadores a probar
+        if separators is None:
+            sep_list = [","]
+        elif isinstance(separators, str):
+            sep_list = [separators]
+        else:
+            sep_list = separators
+
+        best_df = None
+        best_num_cols = 0
+
+        # Iterar sobre cada codificación y separador
+        for encoding in encodings:
+            for sep in sep_list:
+                try:
+                    # Si se usa chunksize, primero leer unas pocas filas para evaluar la separación
+                    if chunksize:
+                        temp_df = pd.read_csv(
+                            file_path,
+                            dtype=column_types,
+                            encoding=encoding,
+                            sep=sep,
+                            nrows=10
+                        )
+                    else:
+                        temp_df = pd.read_csv(
+                            file_path,
+                            dtype=column_types,
+                            encoding=encoding,
+                            sep=sep
+                        )
+                    num_cols = temp_df.shape[1]
+                    # Actualizar el mejor DataFrame (mayor cantidad de columnas)
+                    if num_cols > best_num_cols:
+                        best_df = (encoding, sep, temp_df)
+                        best_num_cols = num_cols
+                    # Si se obtienen más de una columna, se asume lectura correcta
+                    if num_cols > 1:
+                        best_df = (encoding, sep, temp_df)
+                        best_num_cols = num_cols
+                        break  # Se encontró un separador adecuado para esta codificación
+                except (UnicodeDecodeError, ValueError) as e:
+                    logging.warning(f"Error al leer {file_name} con codificación {encoding} y separador '{sep}': {e}")
+                    continue  # Probar con la siguiente combinación
+            if best_df is not None and best_num_cols > 1:
+                break  # Se encontró una combinación adecuada
+
+        # Si se leyó correctamente con alguna combinación, volver a leer el archivo completo (apoyando chunksize si corresponde)
+        if best_df is not None:
+            encoding, sep, _ = best_df
+            try:
                 if chunksize:
-                    df = pd.read_csv(
+                    df_iterator = pd.read_csv(
                         file_path,
                         dtype=column_types,
                         encoding=encoding,
+                        sep=sep,
                         chunksize=chunksize
                     )
-                    # Si se usa chunksize, concatenar los chunks
-                    df = pd.concat(df, ignore_index=True)
+                    df = pd.concat(df_iterator, ignore_index=True)
                 else:
                     df = pd.read_csv(
                         file_path,
                         dtype=column_types,
-                        encoding=encoding
+                        encoding=encoding,
+                        sep=sep
                     )
-            elif file_path.suffix.lower() == '.xlsx':
-                df = pd.read_excel(
-                    file_path,
-                    dtype=column_types
-                )
-            else:
-                raise ValueError(f"Tipo de archivo no soportado para {file_name}.")
-            # Si se leyó correctamente, salir del bucle
+                # Limpieza de comillas dobles no deseadas en columnas de tipo texto
+                df = clean_quotes(df)
+                return df
+            except Exception as e:
+                raise ValueError(f"Error al leer el archivo {file_name} con codificación {encoding} y separador '{sep}': {e}")
+        else:
+            raise ValueError(f"No se pudo leer el archivo {file_name} con las combinaciones de codificaciones y separadores proporcionadas.")
+
+    # Para archivos Excel, se procede de la forma habitual (sin considerar separadores)
+    elif file_path.suffix.lower() == '.xlsx':
+        try:
+            df = pd.read_excel(
+                file_path,
+                dtype=column_types
+            )
             return df
-        except (UnicodeDecodeError, ValueError) as e:
-            logging.warning(f"Error al leer {file_name} con codificación {encoding}: {e}")
-            continue  # Intentar con la siguiente codificación
+        except Exception as e:
+            raise ValueError(f"Error al leer el archivo {file_name}: {e}")
+    else:
+        raise ValueError(f"Tipo de archivo no soportado para {file_name}.")
+
+def clean_quotes(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Limpia las comillas dobles no deseadas en las columnas de tipo texto.
+    Se eliminan patrones como '";' y ';"' y se quitan las comillas sobrantes al inicio y final.
     
-    # Si ninguna codificación funcionó, lanzar excepción
-    raise ValueError(f"No se pudo leer el archivo {file_name} con las codificaciones proporcionadas.")
+    Parámetros:
+        df: DataFrame a limpiar.
+    
+    Devuelve:
+        DataFrame con las cadenas de texto limpiadas.
+    """
+    for col in df.select_dtypes(include='object').columns:
+        df[col] = df[col].apply(lambda x: x.replace('";', ';').replace(';"', ';').strip('"') if isinstance(x, str) else x)
+    return df
 
 def remove_accents(input_str: str) -> str:
     """
