@@ -162,19 +162,25 @@ def data_base_genetic(original_data, cycle = ["CI","CII", "CIII", "CIV"], index_
     # Comenzando la Bases de datos si se requiera para un Ciclo 1  
     if cycle == "CI":
         ######  Parte 1: Dataframe de data (concatenado)    ####################################
+        # Se crea listas vacias para poder guardar las listas totales de columnas de calidad cualitativas
+        list_calid_cualit = []
+        list_calid_cualit_N = []
         # Realizando interelación de columnas de calidad con diccionarios
         for col, mapeo in list_dic.items():
             #Creando Variable para la nueva columna
             nueva_col = f'{col}_#'
             #Realizando columna de el calculado
             df[nueva_col] = df[col].apply(lambda x: mapeo.get(x, None))
+            #Se guarda los nombres de las columnas en las listas creadas anteriormente
+            list_calid_cualit.append(col)
+            list_calid_cualit_N.append(nueva_col)
         
         #Creamos Variable con columnas a sumar
         columnas_a_sumar = [f'{col}_#' for col in column_calid_cualit]
 
         #Reordenando columnas
         #Creando lista de lista de calidad categorica y numerica
-        lista_intercalada_calidad = [item for pair in zip(column_calid_cualit, columnas_a_sumar) for item in pair]
+        lista_intercalada_calidad = [item for pair in zip(list_calid_cualit, list_calid_cualit_N) for item in pair]
         
         #Creando lista reordenada de las columnas
         orden_columnas = index_column + lista_inted + lista_intercalada_calidad + lista_final
