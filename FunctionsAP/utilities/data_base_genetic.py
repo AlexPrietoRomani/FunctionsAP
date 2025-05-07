@@ -159,6 +159,25 @@ def data_base_genetic(original_data, cycle = ["CI","CII", "CIII", "CIV"], index_
 
         return separated_lists
     
+    # Preprocesar los mapeos para incluir minúsculas y variaciones de género
+    def preprocess_mapping(original_map):
+        normalized = {}
+        for key, value in original_map.items():
+            key_lower = key.lower()
+            normalized[key_lower] = value
+            # Agregar variación de género si aplica (ej: 'alto' <-> 'alta')
+            if key_lower.endswith('o'):
+                normalized[key_lower[:-1] + 'a'] = value
+            elif key_lower.endswith('a'):
+                normalized[key_lower[:-1] + 'o'] = value
+        return normalized
+
+    # Función para mapeo seguro
+    def safe_map(mapeo, x):
+        if pd.isna(x):
+            return None
+        return mapeo.get(x.lower(), None)
+    
     # Comenzando la Bases de datos si se requiera para un Ciclo 1  
     if cycle == "CI":
         ######  Parte 1: Dataframe de data (concatenado)    ####################################
@@ -169,8 +188,10 @@ def data_base_genetic(original_data, cycle = ["CI","CII", "CIII", "CIV"], index_
         for col, mapeo in list_dic.items():
             #Creando Variable para la nueva columna
             nueva_col = f'{col}_#'
+            #Realizar preprocesado para normalización de segmentos
+            mapeo_proc = preprocess_mapping(mapeo)
             #Realizando columna de el calculado
-            df[nueva_col] = df[col].apply(lambda x: mapeo.get(x, None))
+            df[nueva_col] = df[col].apply(lambda x: safe_map(mapeo_proc, x))
             #Se guarda los nombres de las columnas en las listas creadas anteriormente
             list_calid_cualit.append(col)
             list_calid_cualit_N.append(nueva_col)
@@ -322,8 +343,10 @@ def data_base_genetic(original_data, cycle = ["CI","CII", "CIII", "CIV"], index_
         for col, mapeo in list_dic.items():
             #Creando Variable para la nueva columna
             nueva_col = f'{col}_#'
+            #Realizar preprocesado para normalización de segmentos
+            mapeo_proc = preprocess_mapping(mapeo)
             #Realizando columna de el calculado
-            df[nueva_col] = df[col].apply(lambda x: mapeo.get(x, None))
+            df[nueva_col] = df[col].apply(lambda x: safe_map(mapeo_proc, x))
             #Se guarda los nombres de las columnas en las listas creadas anteriormente
             list_calid_cualit.append(col)
             list_calid_cualit_N.append(nueva_col)
