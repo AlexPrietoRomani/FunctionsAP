@@ -203,8 +203,16 @@ def data_base_genetic(original_data, cycle = ["CI","CII", "CIII", "CIV"], index_
         #Creando lista de lista de calidad categorica y numerica
         lista_intercalada_calidad = [item for pair in zip(list_calid_cualit, list_calid_cualit_N) for item in pair]
         
+        # Filtrar lista_final desde el DataFrame original
+        lista_final = [
+            col for col in list_columns[posición_final_calid+1:]
+            if col not in list_calid_cualit + list_calid_cualit_N
+        ]
         #Creando lista reordenada de las columnas
         orden_columnas = index_column + lista_inted + lista_intercalada_calidad + lista_final
+        
+        # eliminar duplicados y conservar orden
+        orden_columnas = list(dict.fromkeys(orden_columnas))
         
         #Función para sumar columnas de la variable
         df["Suma de puntaje"] = df[columnas_a_sumar].sum(axis=1,skipna=True)
@@ -273,6 +281,7 @@ def data_base_genetic(original_data, cycle = ["CI","CII", "CIII", "CIV"], index_
         #Creando lista del orden de las columnas
         columnas_sin_index = [f"{columna}_CI-{eval}" for eval in evaluaciones for columna in columnas_a_pivotear]
         
+        # Se agrega una lista con el nuevo orden para generar el datframe de pivot
         new_order = index_column_copy + columnas_sin_index
 
         #Reordenando columnas
@@ -358,8 +367,17 @@ def data_base_genetic(original_data, cycle = ["CI","CII", "CIII", "CIV"], index_
         #Creando lista de lista de calidad categorica y numerica
         lista_intercalada_calidad_culit = [item for pair in zip(list_calid_cualit, list_calid_cualit_N) for item in pair]
         
+        # Filtrar lista_final desde el DataFrame original
+        lista_final = [
+            col for col in list_columns[posición_final_calid+1:]
+            if col not in list_calid_cualit + list_calid_cualit_N
+        ]
+        
         #Creando lista reordenada de las columnas
         orden_columnas = index_column + lista_inted + lista_intercalada_calidad_culit + lista_final 
+        
+        # eliminar duplicados y conservar orden
+        orden_columnas = list(dict.fromkeys(orden_columnas))
         
         #Función para sumar columnas de la variable
         df["Suma de puntaje"] = df[columnas_a_sumar].sum(axis=1,skipna=True)
